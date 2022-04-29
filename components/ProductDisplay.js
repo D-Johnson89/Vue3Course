@@ -1,31 +1,56 @@
 app.component("product-display", {
+	props: {
+		premium: {
+			type: Boolean,
+			required: true,
+		},
+	},
+
 	template:
 		/*html*/
 		`<div class="product-display">
-        <div class="product-container">
-            <div class="product-image">
-                <img :src="image" :class="{ 'out-of-stock-img': !inStock }" alt="" />
+            <div class="product-container">
+                <div class="product-image">
+                    <img :src="image" :class="{ 'out-of-stock-img': !inStock }"/>
+                </div>
+                <div class="product-info">
+                    <h1>{{ title }}</h1>
+                    <p v-show="onSale">{{ sale }}</p>
+                    <p v-if="quantity > 10">In Stock</p>
+                    
+                    <p v-else>Out of Stock</p>
+
+                    <p>Shipping: {{ shipping }}</p>
+                    
+                    <product-details :details="details"></product-details>
+                    <ul>
+                        <li v-for="(size, index) in sizes" :key="index">{{ size }}</li>
+                    </ul>
+                    
+                    <div
+                        v-for="(variant, index) in variants"
+                        :key="variant.id"
+                        @mouseover="updateVariant(index)"
+                        class="color-circle"
+                        :style="{ backgroundColor: variant.color }">
+                    </div>
+                    <button
+                        class="button"
+                        :class="{ disabledButton: !inStock }"
+                        :disabled="!inStock"
+                        @click="addToCart">
+                        Add to Cart
+                    </button>
+                    <button
+                        class="button"
+                        @click="removeCart">
+                        Remove Item
+                    </button>
+                </div>    
             </div>
-            <div class="product-info">
-                <h1>{{ title }}</h1>
-                <p v-show="onSale">{{ sale }}</p>
-                <p v-if="inventory > 10">In Stock</p>
-            
-                <p v-else>Out of Stock</p>
-                <ul>
-                    <li v-for="detail in details">{{ detail }}</liv-for>
-                </ul>
-                <ul>
-                    <li v-for="(size, index) in sizes" :key="index">{{ size }}</li>
-                </ul>
-            
-                <div v-for="(variant, index) in variants" :key="variant.id" @mouseover="updateVariant(index)" class="color-circle" :style="{ backgroundColor: variant.color }"></div>
-                <button class="button" :class="{ disabledButton: !inStock }" :disabled="!inStock" @click="addToCart">Add to Cart</button>
-                <button class="button" @click="removeCart">Remove Item</button>
-            
-            </div>
-        </div>
-    </div>`,
+            <review-list v-if="reviews.length" :reviews="reviews"></review-list>
+            <review-form @review-submitted="addReview"></review-form>
+        </div>`,
 
 	data() {
 		return {
@@ -49,20 +74,25 @@ app.component("product-display", {
 				},
 			],
 			sizes: ["S", "M", "L", "XL"],
+			reviews: [],
 		};
 	},
 
 	methods: {
 		addToCart() {
-			this.cart += 1;
+			this.$emit("add-to-cart", this.variants[this.selectedVariant].id);
 		},
 		removeCart() {
-			if (this.cart >= 1) {
-				this.cart -= 1;
-			}
+			this.$emit(
+				"remove-product",
+				this.variants[this.selectedVariant].id
+			);
 		},
 		updateVariant(index) {
 			this.selectedVariant = index;
+		},
+		addReview(review) {
+			this.reviews.push(review);
 		},
 	},
 
@@ -75,6 +105,12 @@ app.component("product-display", {
 		},
 		inStock() {
 			return this.variants[this.selectedVariant].quantity;
+		},
+		shipping() {
+			if (this.premium) {
+				return "Free";
+			}
+			return 2.99;
 		},
 		sale() {
 			return this.brand + " " + this.product + " is on sale";
